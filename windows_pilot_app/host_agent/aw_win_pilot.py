@@ -46,7 +46,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 MARKER = "<<<AW_WIN_PILOT_JSON>>>"
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -471,17 +471,28 @@ def screenshot(args: dict) -> dict:
     os.makedirs(os.path.dirname(out), exist_ok=True)
 
     target = None
+    region = args.get("region")
     if args.get("hwnd") or args.get("title"):
         hwnd = _resolve_hwnd(args)
         if args.get("focus", True):
             focus_window({"hwnd": hwnd})
         rect = _window_rect(hwnd)
-        target = (rect["x"], rect["y"],
-                  rect["x"] + rect["width"], rect["y"] + rect["height"])
-    elif args.get("region"):
-        r = args["region"]
-        target = (int(r["x"]), int(r["y"]),
-                  int(r["x"]) + int(r["width"]), int(r["y"]) + int(r["height"]))
+        if region:
+            # A region given alongside a window is read as an offset INSIDE
+            # that window, which is how a caller means it ("the top strip of
+            # Edge"). Silently ignoring one of two arguments the caller
+            # deliberately passed is worse than either interpretation.
+            origin_x, origin_y = rect["x"] + int(region["x"]), rect["y"] + int(region["y"])
+            target = (origin_x, origin_y,
+                      min(origin_x + int(region["width"]), rect["x"] + rect["width"]),
+                      min(origin_y + int(region["height"]), rect["y"] + rect["height"]))
+        else:
+            target = (rect["x"], rect["y"],
+                      rect["x"] + rect["width"], rect["y"] + rect["height"])
+    elif region:
+        target = (int(region["x"]), int(region["y"]),
+                  int(region["x"]) + int(region["width"]),
+                  int(region["y"]) + int(region["height"]))
 
     image = ImageGrab.grab(bbox=target, all_screens=target is None)
     if image.mode != "RGB":

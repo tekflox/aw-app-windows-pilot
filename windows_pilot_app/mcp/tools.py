@@ -412,8 +412,10 @@ TOOLS: list[dict] = [
          "title": {"type": "string",
                    "description": "Capture the window whose title contains this."},
          "region": {"type": "object",
-                    "description": "Capture a rectangle: {x, y, width, height} "
-                                   "in screen pixels.",
+                    "description": "Capture a rectangle: {x, y, width, height}. "
+                                   "In screen pixels on its own; relative to "
+                                   "the named window when combined with "
+                                   "hwnd/title.",
                     "properties": {"x": {"type": "integer"}, "y": {"type": "integer"},
                                    "width": {"type": "integer"},
                                    "height": {"type": "integer"}}},
