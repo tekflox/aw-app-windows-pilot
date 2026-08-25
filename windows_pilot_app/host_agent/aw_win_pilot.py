@@ -46,7 +46,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 MARKER = "<<<AW_WIN_PILOT_JSON>>>"
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -811,18 +811,28 @@ def browser_tabs(args: dict) -> dict:
 # Status / provisioning
 # ---------------------------------------------------------------------------
 
+def _installed_version(distribution: str) -> str | None:
+    """Installed version of a distribution, or None if it is not importable.
+
+    Asks ``importlib.metadata`` rather than reading ``module.__version__``:
+    ``playwright`` exposes no ``__version__``, so the attribute approach
+    reports it as missing however correctly it is installed — which reads as
+    a failed provision when nothing failed.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version(distribution)
+    except PackageNotFoundError:
+        return None
+    except Exception:
+        return None
+
+
 def pilot_status(args: dict) -> dict:
     session = ctypes.c_ulong()
     kernel32.ProcessIdToSessionId(kernel32.GetCurrentProcessId(),
                                   ctypes.byref(session))
     width, height = _screen_size()
-
-    def _version(module: str) -> str | None:
-        try:
-            return __import__(module).__version__
-        except Exception:
-            return None
-
     interactive = bool(user32.GetForegroundWindow())
     return {
         "agent_version": VERSION,
@@ -834,7 +844,8 @@ def pilot_status(args: dict) -> dict:
         "has_desktop": interactive,
         "dpi_awareness": _DPI_MODE,
         "virtual_screen": {"width": width, "height": height},
-        "deps": {"pillow": _version("PIL"), "playwright": _version("playwright")},
+        "deps": {"pillow": _installed_version("pillow"),
+                 "playwright": _installed_version("playwright")},
         "cdp": _cdp_alive(int(args.get("port") or DEFAULT_CDP_PORT)),
         "warning": (None if interactive else
                     "No foreground window: this process has no desktop. Screen "
@@ -857,10 +868,33 @@ def provision(args: dict) -> dict:
            "--disable-pip-version-check", "--no-input", *packages]
     result = subprocess.run(cmd, capture_output=True, text=True,
                             encoding="utf-8", errors="replace", timeout=900)
+
+    # Re-check from a FRESH interpreter, not from this one. Python computes
+    # sys.path at startup, and on a first provision the per-user
+    # site-packages directory did not exist yet — so the packages pip just
+    # installed are genuinely unimportable *here*, and an in-process check
+    # reports a perfectly successful install as `pillow: null`. Which is
+    # exactly what the first live run of this app did.
+    probe = subprocess.run(
+        [sys.executable, "-c",
+         "import json;from importlib.metadata import version,PackageNotFoundError\n"
+         "def v(d):\n"
+         "    try: return version(d)\n"
+         "    except PackageNotFoundError: return None\n"
+         "print(json.dumps({'pillow': v('pillow'), 'playwright': v('playwright')}))"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=120)
+    try:
+        deps = json.loads(probe.stdout.strip().splitlines()[-1])
+    except Exception:
+        deps = {"pillow": None, "playwright": None}
+
+    status = pilot_status({})
+    status["deps"] = deps
     return {"command": " ".join(cmd), "exit_code": result.returncode,
             "stdout": (result.stdout or "")[-4000:],
             "stderr": (result.stderr or "")[-2000:],
-            "status_after": pilot_status({})}
+            "status_after": status}
 
 
 VERBS = {
