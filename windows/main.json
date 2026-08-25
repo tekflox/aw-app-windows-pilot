@@ -1,0 +1,120 @@
+{
+  "layout": "stack",
+  "regions": [
+    {
+      "id": "status",
+      "widgets": [
+        { "type": "markdown", "value": "## Windows Pilot" },
+        {
+          "type": "auth_status",
+          "bind": "GET /api/apps/windows-pilot/status",
+          "logout_action": { "call": "POST /api/apps/windows-pilot/logout" },
+          "loading_text": "Checking aw-remote-hosts token…",
+          "logged_in_text": "Token saved — {tool_count} tools are live on aw-gateway as aw__aw_windows_pilot__*, targeting host {remote_host_id}. Host agent v{agent_version}.",
+          "logged_out_text": "No token yet. The tools are registered and will tell any agent that calls them to come here."
+        }
+      ]
+    },
+    {
+      "id": "setup",
+      "widgets": [
+        {
+          "type": "markdown",
+          "value": "### Setup\nThese tools drive a **Windows machine reached through aw-remote-hosts**, not this workspace.\n\n- **Backend URL / Workspace / Token** — the aw-backend that fronts your linked hosts, this (calling) workspace's own slug, and its `AW_WORKSPACE_HOST_TOKEN`. From `aw-workspace-cli remote-hosts hosts` / your `.env`.\n- **Remote host id** — which linked host is the Windows box. Pre-filled for the Surface (`DESKTOP-DRMKFBT`).\n\nThe host's `aw-remote-host` must run in the **logged-in interactive session** — a Windows *service* lives in session 0, which has no desktop, and there every screenshot comes back black and every click goes nowhere. **Test the connection** below reports the session id so you can see which one you have."
+        },
+        {
+          "type": "form",
+          "id": "windows_pilot_plain_settings",
+          "submit": { "call": "POST /api/apps/windows-pilot/config" },
+          "submit_label": "Save",
+          "fields": [
+            {
+              "key": "remote_backend_url",
+              "label": "aw-backend URL",
+              "input": "text",
+              "placeholder": "https://api.aw.tekflox.com"
+            },
+            {
+              "key": "remote_workspace",
+              "label": "Calling workspace slug",
+              "input": "text",
+              "placeholder": "aw"
+            },
+            {
+              "key": "remote_host_id",
+              "label": "Windows host id",
+              "input": "text",
+              "placeholder": "c76c606b0a2a5a8b"
+            },
+            {
+              "key": "python_exe",
+              "label": "Python on the host",
+              "input": "text",
+              "placeholder": "py -3"
+            },
+            {
+              "key": "screenshot_dir",
+              "label": "Capture directory (workspace-relative)",
+              "input": "text",
+              "placeholder": ".tmp/windows-pilot/"
+            },
+            {
+              "key": "browser",
+              "label": "Browser to pilot",
+              "input": "text",
+              "placeholder": "edge"
+            },
+            {
+              "key": "browser_user_data_dir",
+              "label": "Browser profile directory on the host (optional)",
+              "input": "text",
+              "placeholder": "%LOCALAPPDATA%\\aw-windows-pilot\\browser-profile"
+            }
+          ]
+        },
+        {
+          "type": "form",
+          "id": "windows_pilot_token",
+          "submit": { "call": "POST /api/apps/windows-pilot/settings" },
+          "submit_label": "Save token",
+          "fields": [
+            {
+              "key": "remote_token",
+              "label": "aw-backend bearer token",
+              "input": "password",
+              "description": "Stored in the zero-knowledge secret store. Takes effect on the next tool call — no restart."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "widgets": [
+        {
+          "type": "markdown",
+          "value": "### Verify and provision\n**Test the connection** asks the host who and where it is — user, session id, screen size, which dependencies are present.\n\n**Provision the host** uploads the pilot agent to `%USERPROFILE%\\.aw-windows-pilot\\` and pip-installs Pillow (screen capture) and Playwright (browser piloting) into that user's Python. Run it once per host, and again after the app updates — it is idempotent and takes a few minutes the first time."
+        },
+        {
+          "type": "button",
+          "label": "Test the connection",
+          "action": { "call": "POST /api/apps/windows-pilot/test" }
+        },
+        {
+          "type": "button",
+          "label": "Provision the host",
+          "action": { "call": "POST /api/apps/windows-pilot/provision" }
+        }
+      ]
+    },
+    {
+      "id": "browser",
+      "widgets": [
+        {
+          "type": "markdown",
+          "value": "### About the piloted browser\nThe browser half runs **Playwright on the Windows machine itself**, attached over CDP to a real browser window on the user's desktop — not a headless browser in a container. That is what makes it useful: it sees what the user sees, on their network, from their IP.\n\nIt uses a **dedicated persistent profile**, not the user's everyday one. Chrome 136+ and current Edge refuse `--remote-debugging-port` against the default profile (a deliberate anti-infostealer change), so there is no supported way to attach to the Chrome window already open. The persistent profile gets you the same practical result one step later: sign into a site once in the piloted window, and the agent stays signed in from then on."
+        }
+      ]
+    }
+  ]
+}
