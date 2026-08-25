@@ -92,6 +92,50 @@ resolution and no arithmetic.
   `"win+r"`, `"ctrl+shift+esc"`. Space separates groups — `"win+r"` opens
   Run, `"win r"` taps Win and then r, which are different things.
 
+## Don't click your way through an app that can be scripted
+
+Before piloting a GUI step by step, ask whether the app has an automation
+surface — because on this channel a GUI is expensive. Every click, keystroke
+and screenshot is a separate exec round trip, so building a spreadsheet cell
+by cell is ~100 round trips and a hundred chances to misread a coordinate.
+The same work through the app's own COM interface is **one `win_run` call**,
+and it produces a better artefact: real formulas instead of pasted numbers.
+
+Office, Explorer, WMI, the registry and most of Windows are scriptable this
+way. Excel, as the worked example:
+
+```powershell
+$excel = New-Object -ComObject Excel.Application
+$excel.Visible = $true          # a real window on the user's screen
+$excel.DisplayAlerts = $false
+$wb = $excel.Workbooks.Add()
+$ws = $wb.Worksheets.Item(1)
+# ... fill, format, chart ...
+$wb.SaveAs([Environment]::GetFolderPath("Desktop") + "\out.xlsx", 51)
+```
+
+Then use the piloting tools for what they *are* good at: `win_list_windows`
+to find the window it opened, `win_window_action` to maximize it,
+`win_screenshot` to confirm what the user is actually looking at. Script the
+work, pilot the verification.
+
+Four things that bit on the first real run:
+
+- **Write a whole range in one call**, not cell by cell. Build a
+  `New-Object "object[,]" $rows, $cols` and assign it to
+  `$ws.Range("A1").Resize($rows,$cols).Value2`. Per-cell writes are slow, and
+  PowerShell's COM adapter can refuse to put a Double into a cell it first
+  saw hold a String (`Unable to cast object of type 'System.Double'`).
+- **Parenthesise every computed index.** PowerShell reads
+  `$data[0, $i + 1]` as `$data[(0, $i), 1]` and dies with "You cannot index
+  into a 2 dimensional array with index [0,0,1]".
+- **Wrap the whole thing in try/catch and `$excel.Quit()` on failure.** A
+  script that dies halfway leaves an invisible orphan Excel holding an empty
+  workbook, and the next run inherits the mess.
+- **A string starting with `=` becomes a formula** when assigned through
+  `Value2`, and Excel accepts English function names whatever the UI
+  language is — so `"=SUM(B2:M2)"` is portable.
+
 ## The browser loop
 
 ```
@@ -131,7 +175,7 @@ in that window — do not try to type their password.
 | `no result marker` | The host agent is missing, or Python is not on the host's PATH. Run `win_pilot_provision`, or set `python_exe`. |
 | Clicks land in the wrong place | You forgot to divide by `scale`, or the window moved between screenshot and click — re-screenshot. |
 | `SendInput delivered 0/2` | A UAC-elevated window is in the foreground. A non-elevated process cannot send input to it, by design. |
-| `focus_window` reports `focused: false` | Windows refused the foreground change (a modal elsewhere, a full-screen app). Try minimizing the blocker first. |
+| `focus_window` reports `focused: false` | Something else owns the foreground. `win_list_windows` and look at what does — an open Start menu, or a modal you didn't expect (Office's "Sign in to set up Office" nag did this repeatedly). Close the blocker with `win_window_action`, then **click the target's title bar with `win_click`** — a real click takes foreground when `SetForegroundWindow` is refused. |
 | Calls take 15-60s each | Windows PowerShell 5.1 startup on a cold host. Installing PowerShell 7 (`pwsh`) on the machine is the single biggest speed-up. Slow is not hung. |
 | Browser tools say "no CDP browser" | `win_browser_launch` first. |
 | Launch times out | Another instance of that browser already holds the same profile. Close it, or pass a different `user_data_dir`. |
