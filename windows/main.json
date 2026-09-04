@@ -41,12 +41,6 @@
               "placeholder": "aw"
             },
             {
-              "key": "remote_host_id",
-              "label": "Windows host id",
-              "input": "text",
-              "placeholder": "c76c606b0a2a5a8b"
-            },
-            {
               "key": "python_exe",
               "label": "Python on the host",
               "input": "text",

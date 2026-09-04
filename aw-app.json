@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "id": "windows-pilot",
   "name": "Windows Pilot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pilot a real Windows desktop from any agent in this workspace — list and focus windows, screenshot the screen, click, type and press keys — plus a Playwright that drives a persistent browser profile on that machine, so the agent works inside the user's own logged-in sessions. Reaches the machine through aw-remote-hosts; no fixed host, every setting is per-call overridable.",
   "icon": "monitor",
   "category": "Integrations",
@@ -101,7 +101,13 @@
       "remote_host_id": {
         "type": "string",
         "default": "c76c606b0a2a5a8b",
-        "description": "Id of the linked WINDOWS host to pilot, from 'aw-workspace-cli remote-hosts hosts'. Its exec must run in the logged-in interactive session — win_pilot_status reports the session id so you can check. Defaults to Frederico's Surface (DESKTOP-DRMKFBT). Every tool accepts a per-call remote_host_id override."
+        "description": "Id of the linked WINDOWS host to pilot, from 'aw-workspace-cli remote-hosts hosts'. Its exec must run in the logged-in interactive session — win_pilot_status reports the session id so you can check. Defaults to Frederico's Surface (DESKTOP-DRMKFBT). Every tool accepts a per-call remote_host_id override.",
+        "x-options": {
+          "source": "remote-hosts",
+          "filter": { "os": "windows" },
+          "value": "id",
+          "label": ["{id} ({friendly_name})", "{id}"]
+        }
       },
       "python_exe": {
         "type": "string",
