@@ -2,8 +2,8 @@
   "manifest_version": 1,
   "id": "windows-pilot",
   "name": "Windows Pilot",
-  "version": "0.2.0",
-  "description": "Pilot a real Windows desktop from any agent in this workspace — list and focus windows, screenshot the screen, click, type and press keys — plus a Playwright that drives a persistent browser profile on that machine, so the agent works inside the user's own logged-in sessions. Reaches the machine through aw-remote-hosts; no fixed host, every setting is per-call overridable.",
+  "version": "0.3.0",
+  "description": "Pilot a real Windows desktop from any agent in this workspace \u2014 list and focus windows, screenshot the screen, click, type and press keys \u2014 plus a Playwright that drives a persistent browser profile on that machine, so the agent works inside the user's own logged-in sessions. Reaches the machine through aw-remote-hosts; no fixed host, every setting is per-call overridable.",
   "icon": "monitor",
   "category": "Integrations",
   "tier": "inprocess",
@@ -78,7 +78,7 @@
       {
         "id": "aw-windows-pilot",
         "path": "skills/aw-windows-pilot/SKILL.md",
-        "description": "Pilot a real Windows desktop reached through aw-remote-hosts — screenshot the screen, find and focus windows, click/type/press keys, and drive a persistent Playwright browser profile on that machine so the agent acts inside the user's own logged-in sessions. Use for anything about \"my Windows machine\", the Surface, piloting a Windows app, or automating a site in the user's own browser."
+        "description": "Pilot a real Windows desktop reached through aw-remote-hosts \u2014 screenshot the screen, find and focus windows, click/type/press keys, and drive a persistent Playwright browser profile on that machine so the agent acts inside the user's own logged-in sessions. Use for anything about \"my Windows machine\", the Surface, piloting a Windows app, or automating a site in the user's own browser."
       }
     ]
   },
@@ -87,26 +87,31 @@
     "properties": {
       "remote_backend_url": {
         "type": "string",
-        "description": "aw-backend base URL that fronts aw-remote-hosts, e.g. https://api.aw.tekflox.com. Every call goes through {url}/api/workspaces/{remote_workspace}/remote-hosts/{remote_host_id}/... . Set all three of remote_backend_url/remote_workspace/remote_token or none — with any one missing the tools fail naming exactly what is absent rather than guessing a host."
+        "description": "aw-backend base URL that fronts aw-remote-hosts, e.g. https://api.aw.tekflox.com. Every call goes through {url}/api/workspaces/{remote_workspace}/remote-hosts/{remote_host_id}/... . Set all three of remote_backend_url/remote_workspace/remote_token or none \u2014 with any one missing the tools fail naming exactly what is absent rather than guessing a host."
       },
       "remote_workspace": {
         "type": "string",
-        "description": "The CALLING workspace's own slug (e.g. 'aw') — NOT the slug the target host happens to be registered under. aw-backend resolves host ownership server-side, so a host linked to a different workspace of yours is still reached via this workspace's own slug. Using the host's slug here returns 401."
+        "description": "The CALLING workspace's own slug (e.g. 'aw') \u2014 NOT the slug the target host happens to be registered under. aw-backend resolves host ownership server-side, so a host linked to a different workspace of yours is still reached via this workspace's own slug. Using the host's slug here returns 401."
       },
       "remote_token": {
         "type": "string",
         "x-secret": true,
-        "description": "Bearer token for aw-backend — this workspace's AW_WORKSPACE_HOST_TOKEN (from the aw-remote-host /link handshake). Routed to the zero-knowledge secret store via POST /api/apps/windows-pilot/settings — never stored in plain config, because it can run arbitrary commands on a personal machine."
+        "description": "Bearer token for aw-backend \u2014 this workspace's AW_WORKSPACE_HOST_TOKEN (from the aw-remote-host /link handshake). Routed to the zero-knowledge secret store via POST /api/apps/windows-pilot/settings \u2014 never stored in plain config, because it can run arbitrary commands on a personal machine."
       },
       "remote_host_id": {
         "type": "string",
         "default": "c76c606b0a2a5a8b",
-        "description": "Id of the linked WINDOWS host to pilot, from 'aw-workspace-cli remote-hosts hosts'. Its exec must run in the logged-in interactive session — win_pilot_status reports the session id so you can check. Defaults to Frederico's Surface (DESKTOP-DRMKFBT). Every tool accepts a per-call remote_host_id override.",
+        "description": "Id of the linked WINDOWS host to pilot, from 'aw-workspace-cli remote-hosts hosts'. Its exec must run in the logged-in interactive session \u2014 win_pilot_status reports the session id so you can check. Defaults to Frederico's Surface (DESKTOP-DRMKFBT). Every tool accepts a per-call remote_host_id override.",
         "x-options": {
           "source": "remote-hosts",
-          "filter": { "os": "windows" },
+          "filter": {
+            "os": "windows"
+          },
           "value": "id",
-          "label": ["{id} ({friendly_name})", "{id}"]
+          "label": [
+            "{id} ({friendly_name})",
+            "{id}"
+          ]
         }
       },
       "python_exe": {
@@ -130,7 +135,7 @@
       },
       "browser_user_data_dir": {
         "type": "string",
-        "description": "Profile directory the piloted browser uses on the host. Defaults to %LOCALAPPDATA%\\aw-windows-pilot\\browser-profile — a persistent profile, so sites the user signs into once in that window stay signed in for the agent. Chrome 136+ and current Edge refuse remote debugging on the browser's DEFAULT profile, so pointing this at the user's everyday profile does not work."
+        "description": "Profile directory the piloted browser uses on the host. Defaults to %LOCALAPPDATA%\\aw-windows-pilot\\browser-profile \u2014 a persistent profile, so sites the user signs into once in that window stay signed in for the agent. Chrome 136+ and current Edge refuse remote debugging on the browser's DEFAULT profile, so pointing this at the user's everyday profile does not work."
       },
       "cdp_port": {
         "type": "integer",
